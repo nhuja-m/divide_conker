@@ -1,0 +1,10 @@
+utils.py: line 167 indentation problem, fixed.
+
+divide.py: cfg file to be loaded is ex_par.txt not the one that was default in github 
+
+Convolve step: 
+'wtd' is not in ex_par.txt but conker_series expects it. assume default zero?
+
+timing_info.txt: is this created during the convolution step?
+
+Latex is necessary in local machine to run the code.
