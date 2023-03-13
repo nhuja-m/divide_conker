@@ -237,7 +237,7 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.ylabel("W0W1/<B0B1> moments")        
     plt.yscale("log")
     plt.legend()
-    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+    plt.savefig("./hist_plots/sim{f}_moment1.png".format(f=fnl0Object.data_file[7:]))
 
     plt.figure(2)
     plt.plot(s, fnl0Object.m2, label="fnl 0")
@@ -248,7 +248,7 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.ylabel("W0W1/<B0B1> moments")        
     plt.yscale("log")
     plt.legend()
-    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+    plt.savefig("./hist_plots/sim{f}_moment2.png".format(f=fnl0Object.data_file[7:]))
 
     plt.figure(3)
     plt.plot(s, fnl0Object.m3, label="fnl 0")
@@ -259,7 +259,7 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.ylabel("W0W1/<B0B1> moments")        
     plt.yscale("log")
     plt.legend()
-    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+    plt.savefig("./hist_plots/sim{f}_moment3.png".format(f=fnl0Object.data_file[7:]))
 
     plt.figure(4)
     plt.plot(s, fnl0Object.m4, label="fnl 0")
@@ -270,7 +270,7 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.ylabel("W0W1/<B0B1> moments")        
     plt.yscale("log")
     plt.legend()
-    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+    plt.savefig("./hist_plots/sim{f}_moment4.png".format(f=fnl0Object.data_file[7:]))
 
          
 
