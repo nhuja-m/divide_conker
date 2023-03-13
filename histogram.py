@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from scipy.stats import moment
 import os
 import json
 
@@ -16,14 +17,11 @@ class Histogram:
             self.sMin = cfg_set['sMin']
             self.sMax = cfg_set['sMax']
             self.sBins = cfg_set['sBinN']
-            
-
-    
+                
     """
-
     @param: number of partitions in the catalog
     @return: w0 and b0 in that order
-    
+
     """
     def process_plain_grid(self, partitions):
         w0 = []
@@ -55,10 +53,10 @@ class Histogram:
     @param: number of partitions, number of sbins
     @return: dictionary of concatenated W1 values
     """
-    def process_all_w(self, partitions, sbins):
+    def process_all_w(self, partitions):
         w1Bins = {}  # dict that stores info for all s bins
-        for s in range(sbins) :
-            this_sbin = "w1_s{s}".format(s=s)
+        for s in range(self.sBins) :
+            this_sbin = s
             oneBin = []
 
             for i in range(1,partitions+1):
@@ -77,7 +75,7 @@ class Histogram:
     @return: dictionary of concatenated B1 values
 
     """
-    def process_all_b(self, partitions, sbins):
+    def process_all_b(self, partitions):
 
         # calculate normalizing coefficient
         hdul_data = fits.open("./data/{i}.fits".format(i=self.data_file))
@@ -89,8 +87,8 @@ class Histogram:
         nR = np.sum(randoms)  # do this for B0 as well
 
         b1Bins = {}  # dict that stores info for all s bins
-        for s in range(sbins) :
-            this_sbin = "b1_s{s}".format(s=s)
+        for s in range(self.sBins) :
+            this_sbin = s
             oneBin = []
 
             for i in range(1,partitions+1):
@@ -101,6 +99,22 @@ class Histogram:
             b1Bins[this_sbin] = oneBin*(nD/nR)  
 
         return b1Bins
+    
+
+    
+    def combine(self, w0, b0, w1_dict, b1_dict):
+        combined_dict = {} # dict that combines info for all s bins
+        for s in range(self.sBins):
+            w1 = w1_dict[s]
+            b1 = b1_dict[s]
+
+            w0w1 = w0 * w1
+            b0b1 = b0 * b1
+            b0b1_mean = np.mean(b0b1)
+
+            combined_dict[s] = w0w1/b0b1_mean
+        
+        self.master_info = combined_dict
 
 
     """
@@ -109,18 +123,7 @@ class Histogram:
     @return: none
 
     """
-    def plot_hist(self, s_index, w0, b0, w1_dict, b1_dict):
-        toPlot_w1 = "w1_s{i}".format(i=s_index)
-        toPlot_b1 = "b1_s{j}".format(j=s_index)
-        w1 = w1_dict[toPlot_w1]
-        b1 = b1_dict[toPlot_b1]
-
-        w0w1 = w0 * w1
-        b0b1 = b0 * b1
-        b0b1_mean = np.mean(b0b1)
-
-        normalized = w0w1/b0b1_mean
-
+    def plot_hist(self, s_index):
         if not os.path.exists("./hist_plots"):    
             os.makedirs("./hist_plots")
 
@@ -129,13 +132,14 @@ class Histogram:
 
         s_MPCH = s_index * (self.sMax - self.sMin)/(self.sBins-1) + self.sMin
         lbl = "s = " + str(s_MPCH)
+
         plt.figure()
-        n, bins, patches = plt.hist(normalized, 100, histtype='stepfilled', alpha=0.25, color='greenyellow', edgecolor='black', lw=2, label=lbl + r" $h^{-1}$Mpc")
+        n, bins, patches = plt.hist(self.master_info[s_index], 100, histtype='stepfilled', alpha=0.25, color='greenyellow', edgecolor='black', lw=2, label=lbl + r" $h^{-1}$Mpc")
         # plt.hist(normalized, 100, histtype='stepfilled', edgecolor='black', facecolor="None")
         plt.title("{t}".format(t=self.data_file))
         plt.yscale("log")
         plt.xlabel("W0W1/<B0B1>")
-        plt.ylabel("pdf")        
+        plt.ylabel("count")        
         plt.legend()
         plt.savefig("./hist_plots/{f}_s{s}.png".format(f=self.data_file, s=s_index))
 
@@ -151,11 +155,55 @@ class Histogram:
         
         f.close()
 
-        return n, bins, patches
+
+    def calc_moment(self):
+        moment1 = [None] * self.sBins
+        moment2 = [None] * self.sBins
+        moment3 = [None] * self.sBins
+        moment4 = [None] * self.sBins
+        for s in range(self.sBins):
+            normalized = self.master_info[s]
+            moment1[s] = np.mean(normalized)
+            moment2[s] = moment(normalized, moment=2)
+            moment3[s] = moment(normalized, moment=3)
+            moment4[s] = moment(normalized, moment=4)
+
+        self.m1 = moment1
+        self.m2 = moment2
+        self.m3 = moment3
+        self.m4 = moment4
+
+        f = open("./hist/{f}_moments.txt".format(f=self.data_file), "w")
+        
+        f.write("moment1\n")
+        m1 = ""
+        for x in moment1:
+            m1 += str(x) + " "
+        f.write(m1 + "\n")
+
+        f.write("moment2\n")
+        m2 = ""
+        for x in moment2:
+            m2 += str(x) + " "
+        f.write(m2 + "\n")
+
+        f.write("moment3\n")
+        m3 = ""
+        for x in moment3:
+            m3 += str(x) + " "
+        f.write(m3 + "\n")
+
+        f.write("moment4\n")
+        m4 = ""
+        for x in moment4:
+            m4 += str(x) + " "
+        f.write(m4 + "\n")
+        
+        f.write("\n")
 
 
 
-def ProcessHistogram(data_file:str, random_file:str, config_file: str, angular_boxes: int):
+def ProcessHistogram(data_file:str, random_file:str, config_file: str, angular_boxes: int, moment : bool):
     histprocessor = Histogram(data_file, random_file, config_file, 45)
 
     print("Processing plain grids...\n")
@@ -167,11 +215,64 @@ def ProcessHistogram(data_file:str, random_file:str, config_file: str, angular_b
     print("Processing random catalog...\n")
     b1_dict = histprocessor.process_all_b(histprocessor.partitions,histprocessor.sBins)
     print("Random catalog processed\n")
-    print("Saving histogram figures...\n")
-
-    for s in range(histprocessor.sBins):
-        histprocessor.plot_hist(s, w0, b0, w1_dict, b1_dict)
+    print("Combning calculated data...\n")
+    histprocessor.combine(w0, b0, w1_dict, b1_dict)
     print("Done!\n")
+
+    return histprocessor
+
+
+def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
+    # fA = open("./hist/{f}_moments.txt".format(f=fnlAsimx), "r")
+    # fB = open("./hist/{f}_moments.txt".format(f=fnlBsimx), "r")
+
+    s = np.linspace(0, fnl0Object.sBins-1, fnl0Object.sBins)
+
+    plt.figure(1)
+    plt.plot(s, fnl0Object.m1, label="fnl 0")
+    plt.plot(s, fnl100Object.m1, label="fnl 100")
+
+    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s")
+    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.yscale("log")
+    plt.legend()
+    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+
+    plt.figure(2)
+    plt.plot(s, fnl0Object.m2, label="fnl 0")
+    plt.plot(s, fnl100Object.m2, label="fnl 100")
+
+    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s")
+    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.yscale("log")
+    plt.legend()
+    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+
+    plt.figure(3)
+    plt.plot(s, fnl0Object.m3, label="fnl 0")
+    plt.plot(s, fnl100Object.m3, label="fnl 100")
+
+    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s")
+    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.yscale("log")
+    plt.legend()
+    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+
+    plt.figure(4)
+    plt.plot(s, fnl0Object.m4, label="fnl 0")
+    plt.plot(s, fnl100Object.m4, label="fnl 100")
+
+    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s")
+    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.yscale("log")
+    plt.legend()
+    plt.savefig("./hist_plots/sim{f}_moments.png".format(f=fnl0Object.data_file[7:]))
+
+         
 
 
 if __name__ == "__main__":
