@@ -116,46 +116,6 @@ class Histogram:
         
         self.master_info = combined_dict
 
-
-    """
-
-    @param: s_index to plot, w0 from process_plain_grid, b0 from process_plain_grid, w1_dict from process_all_w
-    @return: none
-
-    """
-    def plot_hist(self, s_index):
-        if not os.path.exists("./hist_plots"):    
-            os.makedirs("./hist_plots")
-
-        if not os.path.exists("./hist"):    
-            os.makedirs("./hist")
-
-        s_MPCH = s_index * (self.sMax - self.sMin)/(self.sBins-1) + self.sMin
-        lbl = "s = " + str(s_MPCH)
-
-        plt.figure()
-        n, bins, patches = plt.hist(self.master_info[s_index], 100, histtype='stepfilled', alpha=0.25, color='greenyellow', edgecolor='black', lw=2, label=lbl + r" $h^{-1}$Mpc")
-        # plt.hist(normalized, 100, histtype='stepfilled', edgecolor='black', facecolor="None")
-        plt.title("{t}".format(t=self.data_file))
-        plt.yscale("log")
-        plt.xlabel("W0W1/<B0B1>")
-        plt.ylabel("count")        
-        plt.legend()
-        plt.savefig("./hist_plots/{f}_s{s}.png".format(f=self.data_file, s=s_index))
-
-        f = open("./hist/{f}_s{s}.txt".format(f=self.data_file, s=s_index), "w")
-        f.write("count\n")
-        for x in n:
-            f.write(str(x) + "\n")
-        f.write("\n")
-        
-        f.write("bins\n")
-        for y in bins:
-            f.write(str(y) + "\n")
-        
-        f.close()
-
-
     def calc_moment(self):
         moment1 = [None] * self.sBins
         moment2 = [None] * self.sBins
@@ -203,28 +163,88 @@ class Histogram:
 
 
 
-def ProcessHistogram(data_file:str, random_file:str, config_file: str, angular_boxes: int, moment : bool):
+def ProcessHistogram(data_file:str, random_file:str, config_file: str, angular_boxes: int):
     histprocessor = Histogram(data_file, random_file, config_file, 45)
-
+    print("Working on {d}".format(d=data_file))
     print("Processing plain grids...\n")
     w0, b0 = histprocessor.process_plain_grid(histprocessor.partitions)
     print("Plain grids processed\n")
     print("Processing data catalog...\n")
-    w1_dict = histprocessor.process_all_w(histprocessor.partitions,histprocessor.sBins)
+    w1_dict = histprocessor.process_all_w(histprocessor.partitions)
     print("Data catalog processed\n")
     print("Processing random catalog...\n")
-    b1_dict = histprocessor.process_all_b(histprocessor.partitions,histprocessor.sBins)
+    b1_dict = histprocessor.process_all_b(histprocessor.partitions)
     print("Random catalog processed\n")
-    print("Combning calculated data...\n")
+    print("Combining calculated data...\n")
     histprocessor.combine(w0, b0, w1_dict, b1_dict)
     print("Done!\n")
 
     return histprocessor
 
+def PlotHistograms(fnl0Object:Histogram, fnl100Object:Histogram):
+    if not os.path.exists("./hist_plots"):    
+            os.makedirs("./hist_plots")
 
-def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
+    if not os.path.exists("./hist"):    
+        os.makedirs("./hist")
+
+    if not os.path.exists("./hist/fnl0"):    
+        os.makedirs("./hist/fnl0")
+
+    if not os.path.exists("./hist/fnl100"):    
+        os.makedirs("./hist/fnl100")
+
+    for s_index in range(fnl0Object.sBins):
+        s_MPCH = s_index * (fnl0Object.sMax - fnl0Object.sMin)/(fnl0Object.sBins-1) + fnl0Object.sMin
+        lbl = "s = " + str(s_MPCH)
+
+        plt.figure()
+        n0, bins0, patches0 = plt.hist(fnl0Object.master_info[s_index], 100, histtype='stepfilled', alpha=0.50, color='greenyellow', edgecolor='black', label="fnl 0")
+        n100, bins100, patches100 = plt.hist(fnl100Object.master_info[s_index], 100, histtype='stepfilled', alpha=0.50, color='skyblue', edgecolor='black', label="fnl 100") # plt.hist(normalized, 100, histtype='stepfilled', edgecolor='black', facecolor="None")
+        
+        plt.title("{t} and {u} " +  lbl + r" $h^{-1}$Mpc".format(t=fnl0Object.data_file, u = fnl100Object.data_file))
+        plt.yscale("log")
+        plt.xlabel("W0W1/<B0B1>")
+        plt.ylabel("count log scale")        
+        plt.legend()
+        plt.savefig("./hist_plots/sim{x}_s{s}.png".format(x=fnl0Object.data_file[7:], s=s_index))
+
+        f = open("./hist/fnl0/{f}_s{s}.txt".format(f=fnl0Object.data_file, s=s_index), "w")
+        f.write("count\n")
+        for x in n0:
+            f.write(str(x) + "\n")
+        f.write("\n")
+        
+        f.write("bins\n")
+        for y in bins0:
+            f.write(str(y) + "\n")
+        
+        f.close()
+
+        g = open("./hist/fnl100/{f}_s{s}.txt".format(f=fnl100Object.data_file, s=s_index), "w")
+        g.write("count\n")
+        for x in n100:
+            g.write(str(x) + "\n")
+        g.write("\n")
+        
+        g.write("bins\n")
+        for y in bins100:
+            g.write(str(y) + "\n")
+        
+        g.close()
+
+
+def PlotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     # fA = open("./hist/{f}_moments.txt".format(f=fnlAsimx), "r")
     # fB = open("./hist/{f}_moments.txt".format(f=fnlBsimx), "r")
+
+    if not os.path.exists("./hist_plots"):    
+        os.makedirs("./hist_plots")
+    if not os.path.exists("./hist"):    
+        os.makedirs("./hist")
+
+    fnl0Object.calc_moment()
+    fnl100Object.calc_moment()
 
     s = np.linspace(0, fnl0Object.sBins-1, fnl0Object.sBins)
 
@@ -233,8 +253,8 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.plot(s, fnl100Object.m1, label="fnl 100")
 
     plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
-    plt.xlabel("s")
-    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.xlabel("s" +  r" $h^{-1}$Mpc")
+    plt.ylabel("W0W1/<B0B1> moments log scale")        
     plt.yscale("log")
     plt.legend()
     plt.savefig("./hist_plots/sim{f}_moment1.png".format(f=fnl0Object.data_file[7:]))
@@ -243,9 +263,9 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.plot(s, fnl0Object.m2, label="fnl 0")
     plt.plot(s, fnl100Object.m2, label="fnl 100")
 
-    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
-    plt.xlabel("s")
-    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.title("{d} and {r} moment 2".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s" +  r" $h^{-1}$Mpc")
+    plt.ylabel("W0W1/<B0B1> moments log scale")        
     plt.yscale("log")
     plt.legend()
     plt.savefig("./hist_plots/sim{f}_moment2.png".format(f=fnl0Object.data_file[7:]))
@@ -254,9 +274,9 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.plot(s, fnl0Object.m3, label="fnl 0")
     plt.plot(s, fnl100Object.m3, label="fnl 100")
 
-    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
-    plt.xlabel("s")
-    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.title("{d} and {r} moment 3".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s" +  r" $h^{-1}$Mpc")
+    plt.ylabel("W0W1/<B0B1> moments log scale")        
     plt.yscale("log")
     plt.legend()
     plt.savefig("./hist_plots/sim{f}_moment3.png".format(f=fnl0Object.data_file[7:]))
@@ -265,9 +285,9 @@ def plotMoments(fnl0Object:Histogram, fnl100Object:Histogram):
     plt.plot(s, fnl0Object.m4, label="fnl 0")
     plt.plot(s, fnl100Object.m4, label="fnl 100")
 
-    plt.title("{d} and {r} moment 1".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
-    plt.xlabel("s")
-    plt.ylabel("W0W1/<B0B1> moments")        
+    plt.title("{d} and {r} moment 4".format(d=fnl0Object.data_file, r=fnl100Object.data_file))
+    plt.xlabel("s" +  r" $h^{-1}$Mpc")
+    plt.ylabel("W0W1/<B0B1> moments log scale")        
     plt.yscale("log")
     plt.legend()
     plt.savefig("./hist_plots/sim{f}_moment4.png".format(f=fnl0Object.data_file[7:]))
